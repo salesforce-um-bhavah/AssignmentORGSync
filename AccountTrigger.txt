@@ -1,0 +1,31 @@
+/****************************************************************************
+* Type               : Apex Class
+* Name               : AccountTrigger
+* Created by         : Gautam Singh  
+* Created Date       : 08 Aug 2016
+* Last Modified      : 11 Aug 2016
+* Last Modified By   : Gautam Singh 
+* SOC Layer			 : Invocation Layer
+* Purpose            : Trigger on Account Object
+*************************************************************************** */
+trigger AccountTrigger on Account (after insert,after update) {
+	
+    
+    if (!AccountTriggerHandler.isAlreadyModified() ) {
+        AccountTriggerHandler.setAlreadyModified();
+        
+        List<AccountTriggerHandler.AccountWrapper> allAWrap = new List<AccountTriggerHandler.AccountWrapper>();
+        
+        for(sObject sO: Trigger.new){
+            AccountTriggerHandler.AccountWrapper awrapInstance = new AccountTriggerHandler.AccountWrapper();
+            awrapInstance.acctList = (Account)sO;
+            allAWrap.add(awrapInstance);
+        }
+        system.debug('******' + allAWrap.size() + allAWrap);
+        if(!System.isFuture())
+        	AccountTriggerHandler.fetchAndUpdateReference(JSON.serialize(allAWrap));
+    }   
+
+
+  
+}

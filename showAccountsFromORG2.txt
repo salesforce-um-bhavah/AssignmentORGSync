@@ -1,0 +1,112 @@
+<!--
+* @page 	- showAccountsFromORG2
+* @author 	- Gautam
+* @purpose 	- To fetch account data from ORG2
+-->
+<apex:page id="showAccountsORG2" standardController="Account" extensions="OldOrganizationData" tabStyle="Account" readOnly="true" >
+
+    <script type="text/javascript">
+    
+    window.onload = function() {
+        getRecordsDetails();
+    };
+    
+    //remote call to fetch accounts
+    function getRecordsDetails() {
+        Visualforce.remoting.Manager.invokeAction(
+            '{!$RemoteAction.OldOrganizationData.getAccounts}',
+            function(result, event) {
+                if (event.status) {
+                    var l = result.length;
+                    if (l == 0) {
+                        document.getElementById("errorDetail").innerHTML = 'No Results!';
+                    } else {
+                        sendDataToApex(JSON.stringify(result));
+                    }
+                } else if (event.type === 'exception') {
+                    document.getElementById("errorDetail").innerHTML = event.message + "<br/>\n<pre>" + event.where + "</pre>";
+                } else {
+                    document.getElementById("errorDetail").innerHTML = event.message;
+                }
+            }, 
+            {
+                escape: true
+            });
+    }
+    </script>
+     
+    <apex:form id="frm">
+        
+        <!-- action function to send data to controller to show in pageBlock table --> 
+        <apex:actionFunction id="actFtn" name="sendDataToApex" action="{!parsedata}" status="detailStatus"  reRender="pgBlock, detail" >
+            <apex:param assignTo="{!restreturn}" id="prm1" value="" name="fetchedAccounts"/>
+        </apex:actionFunction>
+        
+        <apex:pageBlock id="pgBlock" title="List of Accounts">
+            
+            
+            
+            <apex:pageBlockButtons id="pbtns" location="top" >
+                <apex:commandButton id="newAcc" action="{!newAccount}"  value="New Account" status="detailStatus"  />
+            </apex:pageBlockButtons>
+            
+            <apex:outputPanel id="paginatePanel">
+                 
+                <!-- actual data --> 
+                <apex:outputPanel id="dataPanel">
+                    <apex:pageBlockSection id="pBs" title="Account Results" collapsible="false" columns="1" >
+                        <div id="errorDetail" />
+                        
+                        <apex:pageBlockTable id="pbTable" value="{!paginatedAccountList}" var="ar" cellPadding="4" border="1">
+                            <apex:column value="{!ar.Name}"/>
+                            <apex:column value="{!ar.Type}"/>
+                            <apex:column value="{!ar.BillingCity}"/>
+                            <apex:column value="{!ar.BillingCountry}"/>
+                            <apex:column value="{!ar.ShippingCity}"/>
+                            <apex:column value="{!ar.ShippingCountry}"/>
+                        </apex:pageBlockTable>
+                    </apex:pageBlockSection>
+                     
+                     <!-- pagination --> 
+                    <apex:outputPanel rendered="{!AND(IF(paginaterService.isAll, false, true), IF(paginaterService.totalPage == 1, false, true))}">
+                        <apex:outputText rendered="{!paginaterService.showPrevious}" >
+                            <apex:commandLink action="{!previousPage}" value=" << Previous" rerender="paginatePanel" status="detailStatus" />
+                        </apex:outputText>
+                        <apex:repeat value="{!paginaterService.pageList}" var="pl">
+                            <apex:outputText rendered="{!!pl.isActive}">
+                                <apex:commandLink action="{!updatePage}" rerender="paginatePanel" status="detailStatus">
+                                    {!pl.pageNum}&nbsp;                         
+                                    <apex:param name="selectedPage" value="{!pl.pageNum}" assignTo="{!paginaterService.pageNum}" />
+                                </apex:commandLink>
+                            </apex:outputText>
+                           
+                            <apex:outputText rendered="{!pl.isActive}" value="{!pl.pageNum}" />
+                        </apex:repeat>
+                        <apex:outputText rendered="{!paginaterService.showNext}">
+                            <apex:commandLink action="{!nextPage}" value=" Next >>" rerender="paginatePanel" status="detailStatus" />
+                        </apex:outputText>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            
+            </apex:outputPanel>
+            <br/>
+            <!-- action status --> 
+            <apex:outputPanel id="detail">
+                <apex:actionStatus id="detailStatus">
+                    <apex:facet name="start">
+                        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.25; z-index: 1000; background-color: black;">
+                            &nbsp;
+                        </div>
+                        <div style="position: fixed; left: 0; top: 0; bottom: 0; right: 0; z-index: 1001; margin: 15% 50%">
+                            <div style="display: inline-block; padding: 2px; background-color: #fff; width: 125px;">
+                                <img src="/img/loading.gif" style="float: left; margin: 8px;" />
+                                <span style="display: inline-block; padding: 10px 0px;">Please Wait...</span>
+                            </div>
+                        </div>
+                    </apex:facet>
+                </apex:actionStatus>
+            </apex:outputPanel>
+            
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

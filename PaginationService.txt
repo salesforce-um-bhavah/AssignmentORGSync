@@ -1,0 +1,69 @@
+/****************************************************************************
+* Type               : Apex Class
+* Name               : PaginationService
+* Created by         : Gautam Singh  
+* Created Date       : 08 Aug 2016
+* Last Modified      : 10 Aug 2016
+* Last Modified By   : Gautam Singh 
+* SOC Layer			 : Service Layer
+* Purpose            : Provide Pagination Service to all Controllers
+*************************************************************************** */
+public class PaginationService {
+    
+    public Integer index {get;set;}
+    public Integer pageNum {get;set;}
+    public Integer totalPage {get;set;}
+    public Integer totalResults {get;set;}
+    
+    public Boolean showPrevious {get;set;}
+    public Boolean showNext {get;set;}
+    public Boolean isAll {get;set;}
+	
+    public List<PageWrapper> pageList {get;set;}    
+    
+    /*constructor*/
+    public PaginationService(Integer listSize, Integer pageSize){
+        this.totalResults = listSize;
+        pageSize = (pageSize > 0)?pageSize:10;
+        this.totalPage = (Integer)Math.ceil((Double)listSize / (Double)pageSize);
+        this.pageNum = 1;
+        this.index = 0;
+        this.isAll = (listSize == pageSize)?true:false;
+        updatePagers();
+    }
+    
+    /*update page numbers */
+    public void updatePagers(){
+        this.pageList = new List<PageWrapper>();
+        for(Integer i = 1; i < (this.totalPage + 1); i++){
+            Boolean b = (i == pageNum)?true:false;
+            this.pageList.add(new PageWrapper(i, b));
+        }
+        this.showPrevious = (this.pageNum == 1)?false:true;
+        this.showNext = (this.pageNum == this.totalPage)?false:true;
+        this.index = this.pageNum - 1;
+    }//END of updatePagers
+    
+    /*decrease page number */
+    public void decrement(){
+        this.pageNum = this.pageNum - 1;
+        updatePagers();
+    }
+    
+    /*increase page number */
+    public void increment(){
+        this.pageNum++;
+        updatePagers();
+    }
+    
+    /*wrapper to store pageNumbers*/
+    public class PageWrapper{
+        public Integer pageNum {get;set;}
+        public Boolean isActive {get;set;}
+        
+        public PageWrapper(Integer num, Boolean active){
+            this.pageNum = num;
+            this.isActive = active;
+        }
+    }
+}

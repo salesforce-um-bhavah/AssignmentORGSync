@@ -1,0 +1,86 @@
+/****************************************************************************
+* Type               : Apex Class
+* Name               : AccountsResource
+* Created by         : Gautam Singh  
+* Created Date       : 08 Aug 2016
+* Last Modified      : 10 Aug 2016
+* Last Modified By   : Gautam Singh 
+* SOC Layer          : Service Layer
+* Purpose            : Account Search Resource
+*************************************************************************** */
+@RestResource(urlMapping='/v1/Accounts/*')
+global with sharing class AccountsResource {
+
+    /*
+     * @author - gautam
+     * @last modified date - 08-10-2016
+     * @last modfied by - gautam
+     * @purpose - this method sends list of accounts as response.
+     */
+    @HttpGet
+    global static AccountWrapper getAccounts() {
+        RestRequest req = RestContext.request;
+        RestResponse res = RestContext.response;
+        AccountWrapper response = new AccountWrapper();
+       
+        searchAccounts(req, res, response);
+        return response;
+    }//END of getAccounts
+    
+    /*
+    * @author - gautam
+    * @last modified date - 08-10-2016
+    * @last modfied by - gautam
+    * @purpose - method to create response
+    * @param - RestRequest, RestResponse, Wrapper Response To be sent
+    */
+    private static void searchAccounts(RestRequest req, RestResponse res, AccountWrapper response){
+        
+        String searchTerm = req.params.get('Name');
+        List<Account> searchResults = new List<Account>();
+        try{
+            
+            if(searchTerm == null || searchTerm == ''){
+                String searchText  = '';
+                //called without any search term.
+                searchResults = AccountServices.getAccounts(searchText);
+            }else{
+                //called with a search term.
+                searchResults = AccountServices.getAccounts(searchTerm);
+            }
+            
+            if(!searchResults.isEmpty()){
+                response.acctList = searchResults;
+                for(Account accInstance : searchResults){
+                    response.accountListByName.put(accInstance.Name, accInstance);
+                }
+                response.status = 'Success';
+                response.message = searchResults.size() + ' Accounts were found.';
+            }else{
+                response.status = 'Error';
+                response.message = 'No Accounts Matched the specified criteria';
+            }        
+            
+        }catch(Exception e){
+            response.status = 'Exception Occured';
+            response.message = e.getMessage();
+        }
+        system.debug('FINAL Search RESPONSE' + response );
+    }//End of searchAccounts
+    
+     /*
+     * @author - gautam
+     * @last modified date - 08-10-2016
+     * @last modfied by - gautam
+     * @purpose - wrapper to hold account data getting sent.
+     */
+    global class AccountWrapper{
+        public List<Account> acctList = new List<Account>();
+        public Map<String, Account> accountListByName = new Map<String, Account>();
+        public String status;
+        public String message;
+        public Integer StatusCode;
+        public AccountWrapper(){}
+    }//End of AccountWrapper
+    
+}

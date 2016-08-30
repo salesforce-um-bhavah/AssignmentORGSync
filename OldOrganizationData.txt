@@ -1,0 +1,169 @@
+/****************************************************************************
+* Type               : Apex Class
+* Name               : OldOrganizationData
+* Created by         : Gautam Singh  
+* Created Date       : 08 Aug 2016
+* Last Modified      : 10 Aug 2016
+* Last Modified By   : Gautam Singh 
+* SOC Layer          : Invocation Layer
+* Purpose            : To show accounts data on showAccountsFromORG2 from ORG 2
+*************************************************************************** */
+global class OldOrganizationData{
+    
+    /*variable to store user credentials*/
+    public static String userName = 'gautam@org2.com';
+    public static String password = 'assignmentadobe03p5Vaj2xCHVnHT1ccaD0x0R9X2';
+     
+    /*variable used for pagination*/
+    public static final Integer pageSize = 100;
+    public PaginationService paginaterService {get;set;}
+    public List<List<Account>> paginatedAllAccountList{get;set;}    //variable to store list of list for pagination
+    public List<Account> paginatedAccountList{get;set;}             //variable to store         list for pagination
+    
+    /*variable used to show data on page*/
+    public static List<Account> accountsFromORG2{get;set;}
+    
+    
+    public static string restreturn{get;set;}
+    
+    /*constructor*/
+    public oldOrganizationData(ApexPages.StandardController stdController){
+       
+    }
+    
+    /*
+     * @author - gautam
+     * @last modified date - 08-10-2016
+     * @last modfied by - gautam
+     * @purpose - this method returns list of accounts from ORG2.
+     */ 
+    @RemoteAction
+    global static List<Account> getAccounts(){
+        System.debug('>>> heap=' + Limits.getHeapSize());
+        System.debug('>>> heap=' + Limits.getLimitHeapSize());
+        system.debug('***** @Remote getAccounts Method Invoked ***** ');
+        
+        /*call to integrationService to authenticate user */
+        HttpResponse authenticationResponse = IntergationServices.AuthenticateUser(userName, password);
+        system.debug('Response --> '+ authenticationResponse.getBody()); 
+        System.debug('>>> heap=' + Limits.getHeapSize());
+        System.debug('>>> heap=' + Limits.getLimitHeapSize());
+        
+        if(string.valueOf(authenticationResponse.getStatusCode()).contains('20')){   
+            
+            /* if user got successfully authentictaed, then fetch access token from body */
+            Map<String, Object> m = new Map<String, Object>();
+            m = (Map<String, Object>) JSON.deserializeUntyped(authenticationResponse.getBody());
+            string accestoken =  string.valueOf(m.get('access_token'));
+            
+            List<String> listOfString = new  List<String>();
+            listOfString.add('');
+            /*call to integrationService to fetch all accounts */
+                System.debug('Before Call >>> heap=' + Limits.getHeapSize());
+                System.debug('Before Call >>> heap=' + Limits.getLimitHeapSize());
+            HttpResponse Response = IntergationServices.fetchAccounts(accestoken, listOfString);
+            System.debug('>>> heap=' + Limits.getHeapSize());
+        System.debug('>>> heap=' + Limits.getLimitHeapSize());
+            system.debug('&&&&&&&&&&&&' + Response.getBody() );
+            IntergationServices.AccountWrapper deserializeAccountWrapper = (IntergationServices.AccountWrapper)JSON.deserialize(Response.getBody(), IntergationServices.AccountWrapper.class);
+            system.debug('Accounts Data Response --> '+ deserializeAccountWrapper); 
+            
+            return deserializeAccountWrapper.acctList;
+        }else{
+            system.debug('### Authentication Error ###' + authenticationResponse);
+            return null;
+        }
+    }//END of getAccounts
+    
+   
+    /*
+     * @author              - Gautam
+     * @last modified date  - 08-10-2016
+     * @last modfied by     - gautam
+     * @purpose             - this method recieves data from @remote action & shows data on 
+     *                        visualforce page.
+     */ 
+    public void parsedata(){
+        system.debug('***** parsedata Method Invoked ***** ');
+        accountsFromORG2 = new List<Account>();
+        
+        /* get data from @Remote Method & cast into account list */
+        List<Object> objectsList = new List<Object>();
+        objectsList = (List<Object>) JSON.deserializeUntyped(restreturn);
+        for(Object objInst : objectsList){
+            Map<String, Object> objectMap = (Map<String,Object>)objInst;
+            Account accountInst = new Account();
+            if(string.ValueOf(objectMap.get('Name')) != null)
+                accountInst.Name = string.ValueOf(objectMap.get('Name'));
+            if(string.ValueOf(objectMap.get('Type')) != null)
+                accountInst.Type   = string.ValueOf(objectMap.get('Type'));
+            if(string.ValueOf(objectMap.get('BillingCity')) != null)
+                accountInst.BillingCity = string.ValueOf(objectMap.get('BillingCity'));
+            if(string.ValueOf(objectMap.get('BillingCountry')) != null)
+                accountInst.BillingCity = string.ValueOf(objectMap.get('BillingCountry'));
+            if(string.ValueOf(objectMap.get('ShippingCity')) != null)
+                accountInst.ShippingCity   =  string.ValueOf(objectMap.get('ShippingCity'));
+             if(string.ValueOf(objectMap.get('ShippingCountry')) != null)
+                accountInst.ShippingCountry   = string.ValueOf(objectMap.get('ShippingCountry'));
+            //add more columns here...
+            accountsFromORG2.add(accountInst);
+        }
+
+        /*paginate the data from accountsFromORG2 List*/        
+        this.paginaterService = new PaginationService(accountsFromORG2.size(), pageSize);
+        paginatedAccountList= new List<Account>();
+        paginatedAllAccountList = new List<List<Account>>();
+            
+        if(accountsFromORG2.size() > 0){
+            List<Account> tempAcc = new List<Account>();        
+            Integer i = 0;
+            for(Account cc : accountsFromORG2){
+                tempAcc.add(cc);
+                i++;
+                if(i == pageSize){
+                    this.paginatedAllAccountList.add(tempAcc);
+                    tempAcc = new List<Account>();
+                    i = 0;
+                }
+            }
+            if(!tempAcc.isEmpty()){
+                this.paginatedAllAccountList.add(tempAcc);
+            }
+        changeData();
+        }
+    }
+    
+    /* pagination method to show previous page */
+    public PageReference previousPage(){
+        this.paginaterService.decrement();
+        return changeData();
+    }
+    
+    /* pagination method to show next page */
+    public PageReference nextPage(){
+        this.paginaterService.increment();
+        return changeData();
+    }
+
+    /* pagination method to update page numbers */
+    public PageReference updatePage(){
+        this.paginaterService.updatePagers();
+        return changeData();
+    }
+
+    /* pagination method refresh & show paginated data */
+    public PageReference changeData(){
+        system.debug('*****this.paginaterService.index'+ this.paginaterService.index);
+        this.paginatedAccountList = this.paginatedAllAccountList.get(this.paginaterService.index);
+        return null;
+    }
+
+    
+    public static PageReference newAccount(){
+        PageReference page = new  PageReference('/001/e');
+        page.setRedirect(true);
+        return page;
+    }
+   
+   
+}//END of showAccountsFromORG2CTRL

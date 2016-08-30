@@ -1,0 +1,69 @@
+/****************************************************************************
+* Type               : Apex Class
+* Name               : IntergationServices
+* Created by         : Gautam Singh  
+* Created Date       : 08 Aug 2016
+* Last Modified      : 30 Aug 2016
+* Last Modified By   : Gautam Singh 
+* SOC Layer          : Service Layer
+* Purpose            : To Authenticate ORG 1 w ORG 2
+*                      To Fetch Account Object Data from ORG 2 into ORG 1
+*************************************************************************** */
+public class IntergationServices {
+
+    static final String endPointToFetchAccessToken = 'https://login.salesforce.com/services/oauth2/token';
+    static final String clientId = '3MVG9szVa2RxsqBZXgOYgFoBL.Ml5WmKVofVDGhn02mL_E1K9sFHvXNoGUxoo9K_dw8Pabf3xUxX_331GUAxi';
+    static final String clientSecret = '8350521056459311811';
+    static final String instanceUrl = 'https://na35.salesforce.com';
+    
+    /*
+     * @author - gautam
+     * @last modified date - 08-10-2016
+     * @last modfied by - gautam
+     * @purpose - authenticate user via userName & passWord method & return Access Token.
+     */ 
+    public static HttpResponse AuthenticateUser(String userName, String passWord){
+        
+        Http h = new Http();
+        httprequest req = new httprequest();
+        req.setEndpoint(endPointToFetchAccessToken);   
+        req.setBody('grant_type=password&client_id='+clientId+'&client_secret='+clientSecret+'&username='+userName+'&password='+password);
+        req.setMethod('POST'); 
+        HttpResponse res = h.send(req); 
+        return res;
+    }//End of AuthenticateUser
+    
+    
+    /*
+     * @author - gautam
+     * @last modified date - 08-10-2016
+     * @last modfied by - gautam
+     * @purpose - fetch acocunts from ORG2.
+     */ 
+    //public static HttpResponse fetchAccounts(String accesToken, String searchTerm){
+      public static HttpResponse fetchAccounts(String accesToken, List<String> searchTermsList){  
+        system.debug('*************************' + searchTermsList);
+        Http h = new Http();
+        HttpRequest req = new HttpRequest();
+        req.setMethod('GET');
+        req.setHeader('Content-Type', 'application/json'); 
+        req.setHeader('Authorization', 'OAuth '+ accestoken);     
+        req.setTimeOut(100000);
+        req.setEndpoint(instanceUrl +'/services/apexrest/v1/Accounts?Name='+searchTermsList);
+        system.debug('*************************' + instanceUrl +'/services/apexrest/v1/Accounts?Name='+searchTermsList);
+        System.debug('>>> heap=' + Limits.getHeapSize());
+        System.debug('>>> heap=' + Limits.getLimitHeapSize());
+        HttpResponse res = h.send(req); 
+        return res;
+    }//End of fetchAccounts
+    
+    public class AccountWrapper{
+        public List<Account> acctList = new List<Account>();
+        public Map<String, Account> accountListByName = new Map<String, Account>();
+        public String status;
+        public String message;
+        public Integer StatusCode;
+        public AccountWrapper(){}
+    }//End of AccountWrapper
+
+}//End of IntergationServices

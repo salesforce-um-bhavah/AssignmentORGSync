@@ -1,0 +1,45 @@
+/****************************************************************************
+* Type               : Apex Class
+* Name               : AccountServices 
+* Created by         : Gautam Singh  
+* Created Date       : 08 Aug 2016
+* Last Modified      : 10 Aug 2016
+* Last Modified By   : Gautam Singh 
+* SOC Layer          : Selector Layer
+* Purpose            : Supports Service Layer 
+*************************************************************************** */
+public class AccountServices {
+    
+    /*
+    * @author - gautam
+    * @last modified date - 08-10-2016
+    * @last modfied by - gautam
+    * @purpose - this method sends list of accounts.
+    */
+    public static List<Account> getAccounts(String searchText){
+        
+        transient List<Account> searchedAccounts = new List<Account>();
+        String query = 'SELECT  Name, BillingCity, BillingState, BillingCountry, ShippingCity, ShippingCountry FROM Account';
+        
+        if(searchText != '' && searchText != ''){
+            
+            searchText = searchText.replace('(','').replace(')','').trim();
+            
+            List<String> accNames = new List<String>();
+            for(String acc: searchText.split(',')){
+                accNames.add('%'+acc.toLowerCase().trim()+'%');
+            }
+            
+            system.debug('accNames**' + accNames);
+            query += ' WHERE NAME LIKE : accNames LIMIT 4000 ';
+            system.debug('query**' + query);
+            searchedAccounts = Database.query(query);            
+        }else{
+            query += ' LIMIT 4000 ';
+            searchedAccounts = Database.query(query);
+        }
+        system.debug('*******'+ searchedAccounts);
+        return searchedAccounts;
+        
+    }//END of getAccounts
+}//End of AccountServices

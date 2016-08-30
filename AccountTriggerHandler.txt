@@ -1,0 +1,106 @@
+/****************************************************************************
+* Type               : Apex Class
+* Name               : AccountTriggerHandler
+* Created by         : Gautam Singh  
+* Created Date       : 08 Aug 2016
+* Last Modified      : 30 Aug 2016
+* Last Modified By   : Gautam Singh 
+* SOC Layer          : Invocation Layer
+* Purpose            : Trigger handler called from Account Object- One Trigger Per Object.
+*************************************************************************** */
+public class AccountTriggerHandler {
+    
+    private static boolean alreadyModified = false;
+    
+    public static boolean isAlreadyModified() {
+        return alreadyModified;
+    }
+    
+    public static void setAlreadyModified() {
+        alreadyModified = true;
+    }
+    
+    static String userName = 'gautam@org2.com';
+    static String password = 'assignmentadobe03p5Vaj2xCHVnHT1ccaD0x0R9X2';
+    
+    @future(callout=true) 
+    public static void fetchAndUpdateReference(String newAccountsJSON){
+        system.debug('******' + newAccountsJSON);
+        List<AccountWrapper> dAccountWrapper = (List<AccountWrapper>)JSON.deserialize(newAccountsJSON, List<AccountWrapper>.class);
+        system.debug('******^******' + dAccountWrapper.size() + dAccountWrapper);
+        
+        /*call to integrationService to authenticate user */
+        HttpResponse authenticationResponse = IntergationServices.AuthenticateUser(userName, password);
+        system.debug('Response --> '+ authenticationResponse.getBody()); 
+        
+        
+        if(string.valueOf(authenticationResponse.getStatusCode()).contains('20')){   
+            
+            /* if user got successfully authentictaed, then fetch access token from body */
+            Map<String, Object> m = new Map<String, Object>();
+            m = (Map<String, Object>) JSON.deserializeUntyped(authenticationResponse.getBody());
+            string accestoken =  string.valueOf(m.get('access_token'));
+
+            List<String> allAccountNames = new List<String>();
+            for(AccountWrapper aW : dAccountWrapper){
+                String accName = aW.acctList.Name;
+                if(accName.containsWhitespace())
+                    	accName = accName.split(' ')[0];
+                allAccountNames.add(accName);
+            }
+            system.debug('Accounts allAccountNames --> '+ allAccountNames); 
+            
+            /*call to integrationService to fetch all accounts */
+            HttpResponse Response = IntergationServices.fetchAccounts(accestoken, allAccountNames);
+            system.debug('Accounts allAccountNames --> '+ allAccountNames); 
+            try{
+                IntergationServices.AccountWrapper deserializeAccountWrapper = (IntergationServices.AccountWrapper)JSON.deserialize(Response.getBody(), IntergationServices.AccountWrapper.class);
+                system.debug('Accounts Data Response --> '+ deserializeAccountWrapper); 
+                List<Account> accountsToUpdate = new List<Account>();
+                for(AccountWrapper IA: dAccountWrapper){
+                    system.debug('^^^^^' + deserializeAccountWrapper.accountListByName );
+                    system.debug('^^^^^' + IA.acctList.Name );
+                    String accountName = IA.acctList.Name;
+                    
+                    system.debug('returnFirstFetchedAccount'+ returnFirstFetchedAccount(accountName, deserializeAccountWrapper.accountListByName));
+                    if(returnFirstFetchedAccount(accountName, deserializeAccountWrapper.accountListByName) != ''){ 
+                        //IA.acctList.Reference_ORG2__c = deserializeAccountWrapper.accountListByName.get(IA.acctList.Name).Id;
+                        IA.acctList.Reference_ORG2__c = returnFirstFetchedAccount(accountName, deserializeAccountWrapper.accountListByName);
+                        accountsToUpdate.add(IA.acctList);
+                    }
+                }
+                
+                if(!accountsToUpdate.isEmpty() ){
+                    update accountsToUpdate;
+                }
+            }catch(JSONException jE){
+                system.debug('Some Error Occured:- ' + jE);
+            }
+        }
+    }
+    /*
+     * Method to return the Fetched Accounts from the Data Recieved.
+     * @author - Gautam
+     * @Date - 30/8/2016
+     */ 
+    public static String returnFirstFetchedAccount(String createdAccount, Map<String, Account> accountListFeched){
+        String matchingRecordId = '';
+        for(String org2Accounts : accountListFeched.keySet()){
+            if(org2Accounts.contains(createdAccount)){
+                if(matchingRecordId != ''){
+                    matchingRecordId += ':'+accountListFeched.get(org2Accounts).Id;
+                }else{
+                    matchingRecordId += accountListFeched.get(org2Accounts).Id;
+                }
+                
+            }
+        }
+        
+        return matchingRecordId;
+    }
+    
+    public class AccountWrapper{
+        public Account acctList = new Account();
+        public AccountWrapper(){}
+    }//End of AccountWrapper
+}
