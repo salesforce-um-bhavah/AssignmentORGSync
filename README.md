@@ -1,7 +1,7 @@
 "# AssignmentORGSync" 
 
 
-ORGANIZATION 1  - LIVE ORG (NEW IMPLEMENTATION)
+**ORGANIZATION 1  - LIVE ORG (NEW IMPLEMENTATION)
 
 
 Requirement 1
@@ -35,10 +35,10 @@ Requirement 2 - Sync of similar accounts getting created in ORG 1 and ORG 2.
         - Trigger handler called from Account Object- One Trigger Per Object.
 
 
-                    *****************************************************************************
                     
                     
-ORGANIZATION 2 - TARGET ORG (PAST IMPLEMENTATION)
+                    
+**ORGANIZATION 2 - TARGET ORG (PAST IMPLEMENTATION)
 
     AccountsResource(/v1/accounts)
         - single REST service exposed from Past Implementation Project.
